@@ -265,7 +265,8 @@ class PacketTunnelSettingsGenerator {
             case .ipv6(let address):
                 ipv6ExcludedRoutes.append(NEIPv6Route(destinationAddress: "\(address)", networkPrefixLength: NSNumber(value: UInt8(128))))
             default:
-                fatalError()
+                // Only resolved IP endpoints can be excluded; never crash the extension over a hostname.
+                continue
             }
         }
 
