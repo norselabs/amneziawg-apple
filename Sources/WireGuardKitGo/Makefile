@@ -11,6 +11,9 @@ CONFIGURATION_TEMP_DIR ?= $(CURDIR)/.tmp
 
 export PATH := $(PATH):/usr/local/bin:/opt/homebrew/bin
 export CC ?= clang
+# amneziawg-go v3 needs Go >= 1.26; pin the toolchain (Go downloads it on first use) so the
+# machine's default Go is left alone.
+export GOTOOLCHAIN ?= go1.27.1
 LIPO ?= lipo
 DESTDIR ?= $(CONFIGURATION_BUILD_DIR)
 BUILDDIR ?= $(CONFIGURATION_TEMP_DIR)/wireguard-go-bridge
@@ -20,16 +23,25 @@ GOARCH_arm64 := arm64
 GOARCH_x86_64 := amd64
 GOOS_macosx := darwin
 GOOS_iphoneos := ios
+GOOS_iphonesimulator := ios
+# Go has no tvOS target; the iOS runtime built against the tvOS SDK is what Apple's toolchain expects.
+GOOS_appletvos := ios
+GOOS_appletvsimulator := ios
 
 build: $(DESTDIR)/libwg-go.a
 version-header: $(DESTDIR)/wireguard-go-version.h
 
-REAL_GOROOT := $(shell go env GOROOT 2>/dev/null)
+# $(shell) does not see Makefile exports on macOS make, so pass the toolchain explicitly.
+REAL_GOROOT := $(shell GOTOOLCHAIN=$(GOTOOLCHAIN) go env GOROOT 2>/dev/null)
 export GOROOT := $(BUILDDIR)/goroot
 $(GOROOT)/.prepared:
 	[ -n "$(REAL_GOROOT)" ]
 	mkdir -p "$(GOROOT)"
+	# The downloaded toolchain lives in the read-only module cache: an earlier copy must be made
+	# writable before rsync --delete can touch it, and the fresh copy before patch can edit it.
+	chmod -R u+w "$(GOROOT)"
 	rsync -a --delete --exclude=pkg/obj/go-build "$(REAL_GOROOT)/" "$(GOROOT)/"
+	chmod -R u+w "$(GOROOT)"
 	cat goruntime-*.diff | patch -p1 -f -N -r- -d "$(GOROOT)"
 	touch "$@"
 
