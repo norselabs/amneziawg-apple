@@ -1,5 +1,8 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.9
 // The swift-tools-version declares the minimum version of Swift required to build this package.
+//
+// Fork notes: tvOS support, the wg-quick parser exported from the kit,
+// no SPM-hostile unsafe linker flags. The Go bridge (libwg-go.a) is built by the consuming app.
 
 import PackageDescription
 
@@ -7,7 +10,8 @@ let package = Package(
     name: "WireGuardKit",
     platforms: [
         .macOS(.v12),
-        .iOS(.v15)
+        .iOS(.v15),
+        .tvOS(.v17)
     ],
     products: [
         .library(name: "WireGuardKit", targets: ["WireGuardKit"])
@@ -31,12 +35,10 @@ let package = Package(
                 "go.mod",
                 "go.sum",
                 "api-apple.go",
-                "api-xray.go",
                 "Makefile"
             ],
             publicHeadersPath: ".",
             linkerSettings: [
-                .unsafeFlags(["-L", "Sources/WireGuardKitGo/out"]),
                 .linkedLibrary("wg-go"),
                 .linkedLibrary("resolv")
             ]
