@@ -9,6 +9,16 @@ SDKROOT ?= $(shell xcrun --sdk $(PLATFORM_NAME) --show-sdk-path)
 CONFIGURATION_BUILD_DIR ?= $(CURDIR)/out
 CONFIGURATION_TEMP_DIR ?= $(CURDIR)/.tmp
 
+# make cannot handle spaces in target names, and Xcode's archive paths contain the scheme's name, which may have
+# spaces: build through links to both directories from a path without them.
+ifneq ($(words $(CONFIGURATION_BUILD_DIR) $(CONFIGURATION_TEMP_DIR)),2)
+SPACELESS_DIR := $(shell mkdir -p "$(CONFIGURATION_BUILD_DIR)" "$(CONFIGURATION_TEMP_DIR)" && \
+	dir=$$(mktemp -d "$${TMPDIR:-/tmp}/wireguard-go-bridge.XXXXXX") && \
+	ln -s "$(CONFIGURATION_BUILD_DIR)" "$$dir/build" && ln -s "$(CONFIGURATION_TEMP_DIR)" "$$dir/temp" && echo "$$dir")
+override CONFIGURATION_BUILD_DIR := $(SPACELESS_DIR)/build
+override CONFIGURATION_TEMP_DIR := $(SPACELESS_DIR)/temp
+endif
+
 export PATH := $(PATH):/usr/local/bin:/opt/homebrew/bin
 export CC ?= clang
 # amneziawg-go v3 needs Go >= 1.26; pin the toolchain (Go downloads it on first use) so the
